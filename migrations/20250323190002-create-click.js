@@ -10,19 +10,23 @@ module.exports = {
       },
       url_id: {
         type: Sequelize.INTEGER,
+        allowNull: false,
         references: {
           model: 'Urls',
           key: 'id'
         }
       },
       timestamp: {
+        allowNull: false,
         type: Sequelize.DATE
       },
       location: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        allowNull: true
       },
       referrer: {
-        type: Sequelize.TEXT
+        type: Sequelize.TEXT,
+        allowNull: true
       },
       created_at: {
         allowNull: false,
