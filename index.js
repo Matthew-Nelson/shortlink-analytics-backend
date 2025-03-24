@@ -1,13 +1,35 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const app = express();
 const { Url, Click } = require('./models');
+const app = express();
 
 // Enable CORS for all routes
 app.use(cors());
 
 app.use(express.json());
+
+// Create endpoint to view all URLs
+app.get('/urls', async (req, res) => {
+  try {
+    const urls = await Url.findAll();
+    res.json(urls);
+  } catch (error) {
+    console.error('Error fetching URLs:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// Create endpoint to view all Clicks
+app.get('/clicks', async (req, res) => {
+  try {
+    const clicks = await Click.findAll();
+    res.json(clicks);
+  } catch (error) {
+    console.error('Error fetching Clicks:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
 
 app.post('/shorten', async (req, res) => {
   const { long_url, custom_id } = req.body;
