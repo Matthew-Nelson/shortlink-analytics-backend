@@ -1,66 +1,31 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { Url, Click } = require('./models');
+const { ApolloServer } = require('apollo-server-express');
+const typeDefs = require('./graphql/schema');
+const resolvers = require('./graphql/resolvers');
+const { sequelize } = require('./models');
+
 const app = express();
 
 // Enable CORS for all routes
 app.use(cors());
 
-app.use(express.json());
+// Initialize Apollo Server
+const server = new ApolloServer({ typeDefs, resolvers });
 
-// Create endpoint to view all URLs
-app.get('/urls', async (req, res) => {
-  try {
-    const urls = await Url.findAll();
-    res.json(urls);
-  } catch (error) {
-    console.error('Error fetching URLs:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
+async function startServer() {
+  await server.start();
+  server.applyMiddleware({ app });
 
-// Create endpoint to view all Clicks
-app.get('/clicks', async (req, res) => {
-  try {
-    const clicks = await Click.findAll();
-    res.json(clicks);
-  } catch (error) {
-    console.error('Error fetching Clicks:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
+  // Sync database and start server
+  sequelize.sync().then(() => {
+    const PORT = process.env.PORT || 4000;
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+      console.log(`GraphQL endpoint available at http://localhost:${PORT}${server.graphqlPath}`);
+    });
+  });
+}
 
-app.post('/shorten', async (req, res) => {
-  const { long_url, custom_id } = req.body;
-  const short_id = custom_id || Math.random().toString(36).substr(2, 8);
-  const url = await Url.create({ long_url, short_id, custom_id });
-  res.json({ short_url: `${req.protocol}://${req.get('host')}/${short_id}` });
-});
-
-app.get('/:shortId', async (req, res) => {
-  const { shortId } = req.params;
-  const url = await Url.findOne({ where: { short_id: shortId } });
-  if (url) {
-    await Click.create({ url_id: url.id, timestamp: new Date(), location: 'unknown', referrer: req.get('Referer') });
-    res.redirect(url.long_url);
-  } else {
-    res.status(404).send('Not Found');
-  }
-});
-
-app.get('/analytics/:shortId', async (req, res) => {
-  const { shortId } = req.params;
-  const url = await Url.findOne({ where: { short_id: shortId } });
-  if (url) {
-    const clicks = await Click.findAll({ where: { url_id: url.id } });
-    res.json({ clicks });
-  } else {
-    res.status(404).send('Not Found');
-  }
-});
-
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+startServer();
